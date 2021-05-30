@@ -35,18 +35,19 @@ int read_region_cpp(uint32_t* buf, const char* slide_path, const float resize_ra
     int64_t target_width = 0, target_height = 0;
     int level_cnt;
 
+    // Some setup functions
     openslide_t* slide = openslide_open(slide_path);
     if(chk_err(slide)){
-        return -1;
+        return 1;
     }
     level_cnt = openslide_get_level_count(slide);
     if(chk_err(slide)){
-        return -1;
+        return 2;
     }
     for(int i = 0; i < level_cnt; i++){
         int32_t tmp_level = openslide_get_level_downsample(slide, i);
         if(chk_err(slide)){
-            return -1;
+            return 3;
         }
         if(tmp_level <= 1.0 / resize_ratio){
             target_level = i;
@@ -54,8 +55,10 @@ int read_region_cpp(uint32_t* buf, const char* slide_path, const float resize_ra
     }
     openslide_get_level_dimensions(slide, target_level, &target_width, &target_height);
     if(chk_err(slide)){
-        return -1;
+        return 4;
     }
+
+    // Openslide parallel read WSIs
     const uint32_t thr = thread_cnt;
     const uint32_t target_height_round_up = ceil((float)target_height / thread_cnt) * thread_cnt;
     const uint32_t target_height_remain = target_height - ceil((float)target_height / thread_cnt) * (thread_cnt - 1);
@@ -74,7 +77,6 @@ int read_region_cpp(uint32_t* buf, const char* slide_path, const float resize_ra
 
     // ARGB2RGBA
     const uint32_t slide_dimension = target_width * target_height;
-    gettimeofday(&begin, NULL);
     #pragma omp parallel for num_threads(32)
     for(uint32_t i = 0; i < slide_dimension; i++){
         uint32_t a = (buf[i] >> 24) & 0xff;
@@ -85,13 +87,10 @@ int read_region_cpp(uint32_t* buf, const char* slide_path, const float resize_ra
         // ABGR (Correct, confirmed)
         buf[i] = (a << 24U | b << 16U | g << 8U | r) & 0xffffffff;
     }
-    gettimeofday(&end, NULL);
-    double t_cpu = (double)(end.tv_usec - begin.tv_usec) / 1000000.0 + (double)(end.tv_sec - begin.tv_sec);
-    const float overhead_load_image = t_cpu;
 
     openslide_close(slide);
     if(chk_err(slide)){
-        return -1;
+        return 5;
     }
 
     return overhead_load_image;
