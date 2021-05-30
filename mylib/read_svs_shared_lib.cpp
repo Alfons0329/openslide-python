@@ -26,10 +26,10 @@ int chk_err(openslide_t* osr){
     return 0;
 }
 extern "C"{
-    float read_region_cpp(uint32_t*, const char*, const int, const int thread_cnt);
+    int read_region_cpp(uint32_t*, const char*, const float, const int);
 }
 
-int read_region_cpp(uint32_t* buf, const char* slide_path, const float resize_ratio_in,const int thread_cnt){
+int read_region_cpp(uint32_t* buf, const char* slide_path, const float resize_ratio_in, const int thread_cnt){
     float resize_ratio = resize_ratio_in;
     int32_t target_level = 0;
     int64_t target_width = 0, target_height = 0;
@@ -84,7 +84,7 @@ int read_region_cpp(uint32_t* buf, const char* slide_path, const float resize_ra
         uint32_t g = (buf[i] >>  8) & 0xff;
         uint32_t b = (buf[i] >>  0) & 0xff;
 
-        // ABGR (Correct, confirmed)
+        // ABGR (Correct, confirmed, little-endian)
         buf[i] = (a << 24U | b << 16U | g << 8U | r) & 0xffffffff;
     }
 
@@ -93,29 +93,5 @@ int read_region_cpp(uint32_t* buf, const char* slide_path, const float resize_ra
         return 5;
     }
 
-    return overhead_load_image;
+    return EXIT_SUCCESS;
 }
-
-#define MAX_N 40000
-int main(int argc, char **argv){
-    uint32_t* buf = (uint32_t*) malloc(sizeof(uint32_t) * MAX_N * MAX_N);
-    if(argc != 4){
-        fprintf(stderr, "%s", "Usage: ./out slide_path, method, thread_cnt");
-        return -1;
-    }
-    read_region_cpp(buf, argv[1], atoi(argv[2]), atoi(argv[3]));
-
-    return 0;
-}
-/*
-// 128 method with thread-pool
-        else if(method == 5){
-            gettimeofday(&begin, NULL);
-            const uint32_t task_height = TASK_H;
-            #pragma omp parallel for num_threads(thr)
-            for(uint32_t i = 0; i < target_height; i += task_height){
-                openslide_read_region(slide, buf + i * target_width, 0, 4 * i, target_level, target_width, 128);
-            }
-            gettimeofday(&end, NULL);
-        }
-*/
