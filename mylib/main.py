@@ -61,7 +61,6 @@ def _read_region_ctype(handle, slide_path, resize_ratio, thread_cnt, w, h):
     
     ret = np.frombuffer(buf)
     ret = Image.frombuffer('RGBA', (w, h), ret, 'raw', 'RGBA', 0, 1)
-    print(type(ret))
     return ret
 
 f_name = 'out_thread_'
@@ -85,7 +84,7 @@ def main():
 
     if save_img:
         for_save = img_rgba.copy()
-        for_save.thumbnail((3840, 2160))
+        for_save.thumbnail((2560, 1440))
         for_save.save(f_name + str(thread_cnt)+ '_.png')
 
 main()
