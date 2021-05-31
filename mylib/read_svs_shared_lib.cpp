@@ -26,10 +26,10 @@ int chk_err(openslide_t* osr){
     return 0;
 }
 extern "C"{
-    int read_region_cpp(uint32_t*, const char*, const float, const int);
+    int read_region_cpp(uint32_t*, const char*, const float, const int, uint32_t&, uint32_t&);
 }
 
-int read_region_cpp(uint32_t* buf, const char* slide_path, const float resize_ratio_in, const int thread_cnt){
+int read_region_cpp(uint32_t* buf, const char* slide_path, const float resize_ratio_in, const int thread_cnt, uint32_t& target_width_in, uint32_t& target_height_in){
     float resize_ratio = resize_ratio_in;
     int32_t target_level = 0;
     int64_t target_width = 0, target_height = 0;
@@ -57,6 +57,8 @@ int read_region_cpp(uint32_t* buf, const char* slide_path, const float resize_ra
     if(chk_err(slide)){
         return 4;
     }
+    target_width_in = target_width;
+    target_height_in = target_height;
 
     // Openslide parallel read WSIs
     const uint32_t thr = thread_cnt;

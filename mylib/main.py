@@ -4,7 +4,6 @@ import cv2
 import argparse
 import time
 import sys, os
-import openslide
 from termcolor import colored
 from PIL import Image
 from ctypes import *
@@ -40,7 +39,7 @@ thread_cnt      = args.thread_cnt
 buf = (40000 * 40000 * c_uint32)()
 dir_path = os.path.dirname(os.path.realpath(__file__))
 handle = CDLL(dir_path + '/mylib.so') 
-handle.read_region_cpp.argtypes = [POINTER(c_uint32), c_char_p, c_float, c_int32]
+handle.read_region_cpp.argtypes = [POINTER(c_uint32), c_char_p, c_float, c_int32, POINTER(c_uint32), POINTER(c_uint32)]
 handle.read_region_cpp.restype = c_int32
 
 # Parallel openslide_read_region() using ctypes with low-level C
@@ -54,30 +53,25 @@ Input args:
     h: slide height
 Return args: ndarray RGBA image
 '''
-def _read_region_ctype(handle, slide_path, resize_ratio, thread_cnt, w, h):
-    cpp_ret_code = handle.read_region_cpp(buf, c_char_p(slide_path.encode('utf-8')), float(resize_ratio), int(thread_cnt))
+def _read_region_ctype(handle, slide_path, resize_ratio, thread_cnt):
+    w = c_uint32()
+    h = c_uint32()
+    cpp_ret_code = handle.read_region_cpp(buf, c_char_p(slide_path.encode('utf-8')), float(resize_ratio), int(thread_cnt), byref(w), byref(h))
     if cpp_ret_code:
         print('read_region_cpp illegal terminate, errcode {}'.format(cpp_ret_code))
     
+    slide_w = w.value
+    slide_h = h.value
+    print('Slide dimension: w:{} x h:{}'.format(slide_w, slide_h))
     ret = np.frombuffer(buf)
-    ret = Image.frombuffer('RGBA', (w, h), ret, 'raw', 'RGBA', 0, 1)
+    ret = Image.frombuffer('RGBA', (slide_w, slide_h), ret, 'raw', 'RGBA', 0, 1)
     return ret
 
 f_name = 'out_thread_'
 def main():
-    slide = openslide.open_slide(slide_path)
-    # Required, (w, h) needed to be acquired from openslide pyton setup functions for suitable size in Image.frombugger in PIL
-    target_level = 0
-    for level in range(len(slide.level_downsamples)):
-        if slide.level_downsamples[level] <= 1.0 / resize_ratio:
-            target_level = level
-
-    target_width, target_height = slide.level_dimensions[target_level]
-
     # Codesgin read region
     begin = time.time()
-#     img_rgba = mylib._read_region_ctype(handle, target_width, target_height)
-    img_rgba = _read_region_ctype(handle, slide_path, resize_ratio, thread_cnt, target_width, target_height)
+    img_rgba = _read_region_ctype(handle, slide_path, resize_ratio, thread_cnt)
     end = time.time()
     t_read_slide = end - begin
     print(colored('\t_read_region_ctype time {:.2f}s'.format(t_read_slide), 'red'))
