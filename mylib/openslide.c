@@ -490,7 +490,7 @@ static bool read_region(openslide_t *osr,
   bool success = true;
 
   // save the old pattern, it's the only thing push/pop won't restore
-  struct timeval begin, end;
+  // struct timeval begin, end;
   // gettimeofday(&begin, NULL);
   cairo_pattern_t *old_source = cairo_get_source(cr);
   cairo_pattern_reference(old_source);
@@ -596,56 +596,45 @@ void openslide_read_region(openslide_t *osr,
   //    be addressable in 31 bits.
   // 3. We would like to constrain the intermediate surface to a reasonable
   //    amount of RAM.
-  // printf("\t\t[Openslide.C LOG]: Big tile: W %d H %d \n", w, h);
+  const int64_t d = 32766;
+  printf("\t\t[Openslide.C LOG]: Big tile V2: W %ld H %ld \n", w, h);
   double ds = openslide_get_level_downsample(osr, level);
-  // calculate surface coordinates and size
-  int64_t sx = x;     // level 0 plane
-  int64_t sy = y;     // level 0 plane
-  int64_t sw = w;  // level plane
-  int64_t sh = h;  // level plane
+  for(int64_t col = 0; col < (w + d - 1) / d; col++){
+    // calculate surface coordinates and size
+    int64_t sx = x + col * d * ds;     // level 0 plane
+    int64_t sy = y;     // level 0 plane
+    int64_t sw = MIN(w - col * d, d);  // level plane
+    int64_t sh = MIN(h, d);  // level plane
 
-  // create the cairo surface for the dest
-  // struct timeval begin, end;
-  cairo_surface_t *surface;
-  // gettimeofday(&begin, NULL);
-  if (dest) {
-    surface = cairo_image_surface_create_for_data(
-            (unsigned char *) (dest),
-            CAIRO_FORMAT_ARGB32, sw, sh, w * 4);
-  } else {
-    // nil surface
-    surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 0, 0);
-  }
-  // gettimeofday(&end, NULL);
-  // double t_cpu = (double)(end.tv_usec - begin.tv_usec) / 1000000.0 + (double)(end.tv_sec - begin.tv_sec);
-  // printf("\t\t[Openslide.C TIME LOG]: cairo_image_surface_create_for_data time %.2lf s\n", t_cpu);
-  
+    // create the cairo surface for the dest
+    cairo_surface_t *surface;
+    if (dest) {
+      surface = cairo_image_surface_create_for_data(
+              (unsigned char *) (dest + col * d),
+              CAIRO_FORMAT_ARGB32, sw, sh, w * 4);
+    } else {
+      // nil surface
+      surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 0, 0);
+    }
 
-  // create the cairo context
-  // gettimeofday(&begin, NULL);
-  cairo_t *cr = cairo_create(surface);
-  cairo_surface_destroy(surface);
+    // create the cairo context
+    cairo_t *cr = cairo_create(surface);
+    cairo_surface_destroy(surface);
 
-  // paint
-  if (!read_region(osr, cr, sx, sy, level, sw, sh, &tmp_err)) {
+    // paint
+    if (!read_region(osr, cr, sx, sy, level, sw, sh, &tmp_err)) {
+      cairo_destroy(cr);
+      goto OUT;
+    }
+
+    // done
+    if (!_openslide_check_cairo_status(cr, &tmp_err)) {
+      cairo_destroy(cr);
+      goto OUT;
+    }
+
     cairo_destroy(cr);
-    goto OUT;
   }
-  // gettimeofday(&end, NULL);
-  // t_cpu = (double)(end.tv_usec - begin.tv_usec) / 1000000.0 + (double)(end.tv_sec - begin.tv_sec);
-  // printf("\t\t[Openslide.C TIME LOG]: read_region time %.2lf s\n", t_cpu);
-
-  // done
-  // gettimeofday(&begin, NULL);
-  if (!_openslide_check_cairo_status(cr, &tmp_err)) {
-    cairo_destroy(cr);
-    goto OUT;
-  }
-
-  cairo_destroy(cr);
-  // gettimeofday(&end, NULL);
-  // t_cpu = (double)(end.tv_usec - begin.tv_usec) / 1000000.0 + (double)(end.tv_sec - begin.tv_sec);
-  // printf("\t\t[Openslide.C TIME LOG]: _openslide_check_cairo_status time %.2lf s\n", t_cpu);
 
 OUT:
   if (tmp_err) {
