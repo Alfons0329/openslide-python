@@ -4,7 +4,7 @@ set -e
 if [ $# -ne 2 ]
 then
     echo "Usage: ./setup.sh $/path/to/openslide/top/folder $/path/to/writable/lib (absolute path and exclude the last /)"
-    echo "I have the permission to write /usr/local/lib and my openslide top folder is /home/user/homework/openslide, then use the following: "
+    echo "I have the sudo permission to write /usr/local/lib and my openslide top folder is /home/user/homework/openslide, then use the following: "
     echo "./setup.sh /home/user/homework/openslide /usr/local/lib"
     exit -1
 fi
