@@ -15,15 +15,15 @@ path_here=$(pwd)
 
 # Overweite the original openslide source code
 cat openslide.c > $path_openslide/src/openslide.c
-cd $path_openslide/build 
+cd $path_openslide/build
 make clean && make -j8 && sudo make install -j8
 
 # Cp the shared object to the designated path in Makefile
-sudo mkdir -p $path_writable_lib/
+sudo mkdir -p $path_writable_lib/openslide-big-tile/
 sudo cp /usr/local/lib/libopenslide.so* $path_writable_lib/openslide-big-tile/
 
 # Cd back, modify Makefile and make
-cd $path_here 
+cd $path_here
 sed_write="RPATH=-Wl,-rpath=$path_writable_lib/openslide-big-tile/"
 sed -i "13s|.*|$sed_write|" Makefile # use | as delimiter to avoid Unkonw option to `s' error (Ref: https://stackoverflow.com/questions/33914360/what-delimiters-can-you-use-in-sed)
 make clean && make -j8

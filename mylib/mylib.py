@@ -4,7 +4,7 @@ from PIL import Image
 # Parallel openslide_read_region() using ctypes with low-level C
 '''
 Input args: 
-    handle: ctypes DLL handle
+    handle: ctypes DLL handle (see main.py) for more information
     slide_path: path/to/certain/slide
     resize_ratio: as title
     thread_cnt: how many thread to use at once to accelerate
