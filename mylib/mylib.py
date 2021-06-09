@@ -8,8 +8,6 @@ Input args:
     slide_path: path/to/certain/slide
     resize_ratio: as title
     thread_cnt: how many thread to use at once to accelerate
-    w: slide width
-    h: slide height
 Return args: ndarray RGBA image
 '''
 def _read_region_ctype(handle, slide_path, resize_ratio, thread_cnt):
