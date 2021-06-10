@@ -7,6 +7,11 @@ import sys, os
 from termcolor import colored
 from PIL import Image
 from ctypes import *
+import mylib_wrapper
+'''
+Not import mylib
+https://stackoverflow.com/questions/65356321/creating-a-python-module-using-ctypes
+'''
 
 # Argparse
 parser = argparse.ArgumentParser()
@@ -42,37 +47,14 @@ handle = CDLL(dir_path + '/mylib.so')
 handle.read_region_cpp.argtypes = [POINTER(c_uint32), c_char_p, c_float, c_int32, POINTER(c_uint32), POINTER(c_uint32)]
 handle.read_region_cpp.restype = c_int32
 
-# Parallel openslide_read_region() using ctypes with low-level C
-'''
-Input args:
-    handle: ctypes DLL handle
-    slide_path: path/to/certain/slide
-    resize_ratio: as title
-    thread_cnt: how many thread to use at once to accelerate
-Return args: ndarray RGBA image
-'''
-def _read_region_ctype(handle, slide_path, resize_ratio, thread_cnt):
-    w = c_uint32()
-    h = c_uint32()
-    cpp_ret_code = handle.read_region_cpp(buf, c_char_p(slide_path.encode('utf-8')), float(resize_ratio), int(thread_cnt), byref(w), byref(h))
-    if cpp_ret_code:
-        print('read_region_cpp illegal terminate, errcode {}'.format(cpp_ret_code))
-
-    slide_w = w.value
-    slide_h = h.value
-    print('Slide dimension: w:{} x h:{}'.format(slide_w, slide_h))
-    ret = np.frombuffer(buf)
-    ret = Image.frombuffer('RGBA', (slide_w, slide_h), ret, 'raw', 'RGBA', 0, 1)
-    return ret
-
-REPEAT=10
+REPEAT=1
 
 f_name = 'out_thread_'
 def main():
     # Codesgin read region
     for i in range(REPEAT):
         begin = time.time()
-        img_rgba = _read_region_ctype(handle, slide_path, resize_ratio, thread_cnt)
+        img_rgba = mylib_wrapper._read_region_ctype(buf, handle, slide_path, resize_ratio, thread_cnt)
         end = time.time()
         t_read_slide = end - begin
         print(colored('\t_read_region_ctype time {:.2f}s'.format(t_read_slide), 'red'))
