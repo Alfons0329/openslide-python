@@ -10,7 +10,7 @@ freq_limit=$1
 count_limit=$2
 
 timestamp=`date +"%Y%m%d_%H%M%S"`
-thread_arr=(16 8 4 2 1)
+thread_arr=(32 16 8 4 2 1)
 
 runomp(){
     echo $FUNCNAME
@@ -35,7 +35,7 @@ logcpufreq(){
     > $f_name\.txt
 
     log_cnt=0
-    while [ $log_cnt -le 20 ]
+    while [ $log_cnt -le 50 ]
     do
         cat /proc/cpuinfo | grep "MHz" | head -1 | awk -F: '{ print $2 }' 2>&1 | tee -a $f_name.txt
         sleep $freq_limit
