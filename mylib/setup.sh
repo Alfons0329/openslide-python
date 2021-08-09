@@ -14,7 +14,7 @@ path_writable_lib=$2
 path_here=$(pwd)
 
 # Overweite the original openslide source code
-cat openslide.c > $path_openslide/src/openslide.c
+cat openslide_refactorized.c > $path_openslide/src/openslide.c
 cd $path_openslide/build
 make clean && make -j8 && sudo make install -j8
 
