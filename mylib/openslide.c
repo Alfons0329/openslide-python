@@ -597,7 +597,6 @@ void openslide_read_region(openslide_t *osr,
   // 3. We would like to constrain the intermediate surface to a reasonable
   //    amount of RAM.
   const int64_t d = 32766;
-  printf("\t\t[Openslide.C LOG]: Big tile V2: W %ld H %ld \n", w, h);
   double ds = openslide_get_level_downsample(osr, level);
   for(int64_t col = 0; col < (w + d - 1) / d; col++){
     // calculate surface coordinates and size
