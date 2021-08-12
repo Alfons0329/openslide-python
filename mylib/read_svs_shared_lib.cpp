@@ -29,13 +29,12 @@ extern "C"{
     int read_region_cpp(uint32_t*, const char*, const float, const int, uint32_t&, uint32_t&);
 }
 
-int read_region_cpp(uint32_t* buf, const char* slide_path, const float resize_ratio_in, const int thread_cnt, uint32_t& target_width_in, uint32_t& target_height_in){
-    float resize_ratio = resize_ratio_in;
-    int32_t target_level = 0;
-    int64_t target_width = 0, target_height = 0;
-    int level_cnt;
+    int read_region_cpp(uint32_t* buf, const char* slide_path, const float resize_ratio_in, const int thread_cnt, uint32_t& target_width_in, uint32_t& target_height_in){
+    const uint64_t max_resolution = 40000 * 40000;
+    uint32_t target_level = 0;
+    uint32_t target_width = 0, target_height = 0;
+    int32_t level_cnt;
 
-    printf("Refactorized\n");
     // Some setup functions
     openslide_t* slide = openslide_open(slide_path);
     if(chk_err(slide)){
@@ -50,35 +49,37 @@ int read_region_cpp(uint32_t* buf, const char* slide_path, const float resize_ra
         if(chk_err(slide)){
             return 3;
         }
-        if(tmp_level <= 1.0 / resize_ratio){
+        if(tmp_level <= 1.0 / resize_ratio_in){
             target_level = i;
-        }
+            }
     }
     openslide_get_level_dimensions(slide, target_level, &target_width, &target_height);
     if(chk_err(slide)){
         return 4;
     }
+    if(target_width * target_height > 40000 * 40000){
+        fprintf(stderr, "Whole-slide image resolution exceeded 40000 * 40000 (our max supported resolution)");
+        exit(-1);
+    }
+    // To write into python byref in wrapper for PIL.Image.frombuffer() usage
     target_width_in = target_width;
     target_height_in = target_height;
 
     // Openslide parallel read WSIs
-    // Put Line 64 to 79 into orr
-    // const uint32_t thr = thread_cnt;
-    // const uint32_t target_height_round_up = ceil((float)target_height / thread_cnt) * thread_cnt;
-    // const uint32_t target_height_remain = target_height - ceil((float)target_height / thread_cnt) * (thread_cnt - 1);
-    // const uint32_t segment_y = target_height_round_up / thr;
-    // const uint32_t chunksize = target_width * target_height_round_up / thr;
-    
-    // #pragma omp parallel for num_threads(thr)
-    // for(uint32_t i = 0; i < thr; i++){
-    //     if(i == thr - 1){
-    //         openslide_read_region(slide, buf + chunksize * i, 0, 4 * segment_y * i, target_level, target_width, target_height_remain);
-    //     }
-    //     else{
-    //         openslide_read_region(slide, buf + chunksize * i, 0, 4 * segment_y * i, target_level, target_width, segment_y);
-    //     }
-    // }
-    openslide_read_region(slide, buf, 0, 0, target_level, target_width, target_height);
+    const uint32_t target_height_round_up = ceil((float)target_height / thread_cnt) * thread_cnt;
+    const uint32_t target_height_remain = target_height - ceil((float)target_height / thread_cnt) * (thread_cnt - 1);
+    const uint32_t segment_y = target_height_round_up / thread_cnt;
+    const uint32_t chunksize = target_width * target_height_round_up / thread_cnt;
+
+    #pragma omp parallel for num_threads(thread_cnt)
+    for(uint32_t i = 0; i < thread_cnt; i++){
+        if(i == thread_cnt - 1){
+            openslide_read_region(slide, buf + chunksize * i, 0, 4 * segment_y * i, target_level, target_width, target_height_remain);
+        }
+        else{
+            openslide_read_region(slide, buf + chunksize * i, 0, 4 * segment_y * i, target_level, target_width, segment_y);
+        }
+    }
 
     // ARGB2RGBA
     const uint32_t slide_dimension = target_width * target_height;
