@@ -34,9 +34,7 @@ int read_region_cpp(uint32_t* buf, const char* slide_path, const float resize_ra
     int32_t target_level = 0;
     int64_t target_width = 0, target_height = 0;
     int level_cnt;
-
-    printf("Refactorized\n");
-    // Some setup functions
+    
     openslide_t* slide = openslide_open(slide_path);
     if(chk_err(slide)){
         return 1;
@@ -61,23 +59,6 @@ int read_region_cpp(uint32_t* buf, const char* slide_path, const float resize_ra
     target_width_in = target_width;
     target_height_in = target_height;
 
-    // Openslide parallel read WSIs
-    // Put Line 64 to 79 into orr
-    // const uint32_t thr = thread_cnt;
-    // const uint32_t target_height_round_up = ceil((float)target_height / thread_cnt) * thread_cnt;
-    // const uint32_t target_height_remain = target_height - ceil((float)target_height / thread_cnt) * (thread_cnt - 1);
-    // const uint32_t segment_y = target_height_round_up / thr;
-    // const uint32_t chunksize = target_width * target_height_round_up / thr;
-    
-    // #pragma omp parallel for num_threads(thr)
-    // for(uint32_t i = 0; i < thr; i++){
-    //     if(i == thr - 1){
-    //         openslide_read_region(slide, buf + chunksize * i, 0, 4 * segment_y * i, target_level, target_width, target_height_remain);
-    //     }
-    //     else{
-    //         openslide_read_region(slide, buf + chunksize * i, 0, 4 * segment_y * i, target_level, target_width, segment_y);
-    //     }
-    // }
     openslide_read_region(slide, buf, 0, 0, target_level, target_width, target_height);
 
     // ARGB2RGBA
